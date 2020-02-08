@@ -108,3 +108,22 @@ class Normalize(object):
         for i in range(5):
             sample[i] = self.normalizer(sample[i])
         return sample
+
+
+if __name__ == '__main__':
+    from torchvision import datasets
+    from tqdm import tqdm
+
+    level = 4
+    erp_shape = (60, 120)
+    root_dataset = datasets.MNIST(root='../raw_data', train=True, download=True)
+    tmpset = UnfoldIcoDataset(root_dataset, erp_shape, level)
+    imgs = []
+    for it in tqdm(tmpset):
+        unfold_imgs = [it[i] / 255 for i in range(5)]
+        unfold_imgs = np.concatenate(unfold_imgs, axis=1)
+        imgs.append(unfold_imgs)
+
+    imgs = np.array(imgs, dtype=np.float)
+    print(f'total len:{len(imgs)}, mean:{imgs.mean():.4f}, std:{imgs.std():.4f}')
+    # total len:60000, mean:0.0645, std:0.2116
