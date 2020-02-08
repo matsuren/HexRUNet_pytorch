@@ -9,10 +9,10 @@ class ResBlock(nn.Module):
         super(ResBlock, self).__init__()
         self.conv1 = nn.Sequential(
             UnfoldConv2d(in_channels, out_channels, 1, bias=bias), UnfoldMaxPool2d(2),
-            UnfoldBatchNorm2d(out_channels), UnfoldReLU(inplace=True))
+            UnfoldBatchNorm2d(out_channels), UnfoldReLU())
         self.conv2 = nn.Sequential(
             HexConv2d(out_channels, out_channels, level - 1, 1, bias=bias),
-            UnfoldBatchNorm2d(out_channels), UnfoldReLU(inplace=True))
+            UnfoldBatchNorm2d(out_channels), UnfoldReLU())
         self.conv3 = nn.Sequential(
             UnfoldConv2d(out_channels, out_channels, 1, bias=bias), UnfoldBatchNorm2d(out_channels))
 
@@ -20,7 +20,7 @@ class ResBlock(nn.Module):
             UnfoldConv2d(in_channels, out_channels, 1, bias=bias), UnfoldMaxPool2d(2),
             UnfoldBatchNorm2d(out_channels))
 
-        self.relu = UnfoldReLU(inplace=True)
+        self.relu = UnfoldReLU()
 
     def forward(self, x):
         identity = x
@@ -48,7 +48,7 @@ class HexRUNet_C(nn.Module):
     def __init__(self, in_channels):
         super(HexRUNet_C, self).__init__()
         self.conv1 = nn.Sequential(
-            HexConv2d(in_channels, 16, level=4, stride=1), UnfoldReLU(inplace=True), UnfoldBatchNorm2d(16))
+            HexConv2d(in_channels, 16, level=4, stride=1), UnfoldReLU(), UnfoldBatchNorm2d(16))
         self.block1 = ResBlock(16, 64, level=4)
         self.block2 = ResBlock(64, 256, level=3)
         self.fc = nn.Linear(256, 10)

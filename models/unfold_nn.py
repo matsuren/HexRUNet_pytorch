@@ -100,9 +100,18 @@ class UnfoldReLU(nn.ReLU):
         return out
 
 
-class UnfoldBatchNorm2d(nn.BatchNorm2d):
+# class UnfoldBatchNorm2d(nn.BatchNorm2d):
+#     def forward(self, x):
+#         b, c, h, w = x[0].shape
+#         # batch => len(x)*batch
+#         out_cat = super(UnfoldBatchNorm2d, self).forward(torch.cat(x, dim=0))
+#         out = [out_cat[b * i:b * (i + 1)] for i in range(5)]  # => list of b x c x h x w
+#         return out
+class UnfoldBatchNorm2d(nn.BatchNorm3d):
     def forward(self, x):
-        out = [super(UnfoldBatchNorm2d, self).forward(x[i]) for i in range(5)]
+        stack_x = torch.stack(x, dim=2)
+        stack_out = super(UnfoldBatchNorm2d, self).forward(stack_x)
+        out = [stack_out[:, :, i] for i in range(5)]
         return out
 
 
