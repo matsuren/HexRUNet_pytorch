@@ -195,6 +195,8 @@ def main():
 
         print(f"Epoch:{epoch}, Test Loss average:{ave_loss:.4f}, Accuracy average:{ave_acc:.2f}")
 
+    writer.close()
+    print("Finish")
 
 if __name__ == '__main__':
     main()
