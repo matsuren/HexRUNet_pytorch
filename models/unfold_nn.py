@@ -1,4 +1,5 @@
 import math
+from functools import partial
 
 import torch
 import torch.nn as nn
@@ -125,3 +126,18 @@ class UnfoldMaxPool2d(nn.MaxPool2d):
     def forward(self, x):
         out = [super(UnfoldMaxPool2d, self).forward(x[i]) for i in range(5)]
         return out
+
+
+class UnfoldUpsample(nn.Module):
+    def __init__(self):
+        super(UnfoldUpsample, self).__init__()
+        self.up = partial(F.interpolate, mode='bilinear', align_corners=True)
+
+    def forward(self, x):
+        x = unfold_padding(x, only_NE=True)
+        h, w = x[0].shape[-2:]
+
+        for i in range(5):
+            x[i] = self.up(x[i], (2 * h - 1, 2 * w - 1))[..., 1:, :-1]
+
+        return x
