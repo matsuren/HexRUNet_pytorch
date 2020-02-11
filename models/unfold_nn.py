@@ -141,3 +141,9 @@ class UnfoldUpsample(nn.Module):
             x[i] = self.up(x[i], (2 * h - 1, 2 * w - 1))[..., 1:, :-1]
 
         return x
+
+
+class UnfoldAvgPool2d(nn.AvgPool2d):
+    def forward(self, x):
+        out = [super(UnfoldAvgPool2d, self).forward(x[i]) for i in range(5)]
+        return out

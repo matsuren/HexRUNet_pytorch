@@ -17,9 +17,11 @@ from tqdm import tqdm
 
 from dataloader import UnfoldIcoDataset, ToTensor, Normalize
 from models.hexrunet import HexRUNet_C
+from models.octave_nn import OctHexRUNet_C, OctHexRUNet_C_2
 
 parser = argparse.ArgumentParser(description='Training for OmniMNIST',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--model', default='hex', choices=['hex', 'oct', 'oct2'])
 
 parser.add_argument('--epochs', default=30, type=int, metavar='N', help='total epochs')
 parser.add_argument('--pretrained', default=None, metavar='PATH',
@@ -56,7 +58,13 @@ def main():
 
     print('=> setting model')
     start_epoch = 0
-    model = HexRUNet_C(1)
+    print('Model type:', args.model)
+    if args.model == 'hex':
+        model = HexRUNet_C(1)
+    elif args.model == 'oct':
+        model = OctHexRUNet_C(1)
+    elif args.model == 'oct2':
+        model = OctHexRUNet_C_2(1)
     total_params = 0
     for param in model.parameters():
         total_params += np.prod(param.shape)
@@ -84,7 +92,7 @@ def main():
         print("=> Resume training from epoch {}".format(start_epoch))
 
     timestamp = datetime.now().strftime("%m%d-%H%M")
-    log_folder = join('checkpoints', f'{args.arch}_{timestamp}')
+    log_folder = join('checkpoints', f'{args.model}_{args.arch}_{timestamp}')
     print(f'=> create log folder: {log_folder}')
     os.makedirs(log_folder, exist_ok=True)
     with open(join(log_folder, 'args.json'), 'w') as f:
@@ -197,6 +205,7 @@ def main():
 
     writer.close()
     print("Finish")
+
 
 if __name__ == '__main__':
     main()
