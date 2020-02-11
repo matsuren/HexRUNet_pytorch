@@ -48,7 +48,7 @@ class HexRUNet_C(nn.Module):
     def __init__(self, in_channels):
         super(HexRUNet_C, self).__init__()
         self.conv1 = nn.Sequential(
-            HexConv2d(in_channels, 16, level=4, stride=1), UnfoldReLU(), UnfoldBatchNorm2d(16))
+            HexConv2d(in_channels, 16, level=4, stride=1), UnfoldBatchNorm2d(16), UnfoldReLU())
         self.block1 = ResBlock(16, 64, level=4)
         self.block2 = ResBlock(64, 256, level=3)
         self.fc = nn.Linear(256, 10)
