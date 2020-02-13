@@ -12,7 +12,7 @@ from utils.geometry_helper import unfold_padding, get_weight_alpha
 
 
 class HexConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, level, stride, bias=False):
+    def __init__(self, in_channels, out_channels, level, stride=1, bias=False):
         """ Hexagonal convolution proposed in [1].
 
         References
@@ -29,34 +29,46 @@ class HexConv2d(nn.Module):
         self.out_channels = out_channels
 
         self.stride = _pair(stride)
-        self.weight = Parameter(torch.Tensor(out_channels, in_channels, 7))
+        # weight
+        weight_trainable = torch.Tensor(out_channels, in_channels, 7)
+        nn.init.kaiming_uniform_(weight_trainable, mode='fan_in', nonlinearity='relu')
+        self.weight = Parameter(weight_trainable)  # adding zero
 
-        self._w1_index = [
-            [-1, 5, 4],
-            [0, 6, 3],
-            [1, 2, -1]
+        #         self._w1_index = [
+        #             [-1, 5, 4],
+        #             [0, 6, 3],
+        #             [1, 2, -1]
+        #         ]
+        #         self._w2_index = [
+        #             [-1, 0, 5],
+        #             [1, 6, 4],
+        #             [2, 3, -1]
+        #         ]
+
+        _w1_index = [
+            5, 4,
+            0, 6, 3,
+            1, 2
         ]
-        self._w2_index = [
-            [-1, 0, 5],
-            [1, 6, 4],
-            [2, 3, -1]
+        _w2_index = [
+            0, 5,
+            1, 6, 4,
+            2, 3
         ]
+
+        self.register_buffer('w1_index', torch.tensor(_w1_index))
+        self.register_buffer('w2_index', torch.tensor(_w2_index))
 
         alpha = torch.from_numpy(get_weight_alpha(outlevel)).float()
         self.register_buffer('alpha', alpha)
 
         if bias:
             self.bias = Parameter(torch.Tensor(out_channels))
-        else:
-            self.register_parameter('bias', None)
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        nn.init.kaiming_uniform_(self.weight, mode='fan_in', nonlinearity='relu')
-        if self.bias is not None:
-            fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
+            fan_in = in_channels * 9
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
+        else:
+            self.register_parameter('bias', None)
 
     def extra_repr(self):
         s = ('{in_channels}, {out_channels}, kernel_size=(hexagonal)'
@@ -64,34 +76,20 @@ class HexConv2d(nn.Module):
         return s.format(**self.__dict__)
 
     def get_hex_weight(self):
-        size = (*self.weight.shape[:2], 3, 3)
-        dtype = self.weight.dtype
-        device = self.weight.device
-        weight1 = torch.zeros(size, dtype=dtype, device=device)
-        weight2 = torch.zeros(size, dtype=dtype, device=device)
-
-        for j in range(3):
-            for i in range(3):
-                idx = self._w1_index[j][i]
-                if idx >= 0:
-                    weight1[..., j, i] = self.weight[..., idx]
-                idx = self._w2_index[j][i]
-                if idx >= 0:
-                    weight2[..., j, i] = self.weight[..., idx]
-
-        return weight1, weight2
+        weight1 = F.pad(torch.index_select(self.weight, -1, self.w1_index), (1, 1))
+        weight2 = F.pad(torch.index_select(self.weight, -1, self.w2_index), (1, 1))
+        out_ch, in_ch = weight1.shape[:2]
+        return weight1.view(out_ch, in_ch, 3, 3), weight2.view(out_ch, in_ch, 3, 3)
 
     def forward(self, input):
         x = unfold_padding(input)
         weight1, weight2 = self.get_hex_weight()
 
-        outputs = []
+        outputs = [None for _ in range(5)]
         for i in range(5):
             feat1 = F.conv2d(x[i], weight1, self.bias, self.stride)
             feat2 = F.conv2d(x[i], weight2, self.bias, self.stride)
-            out = self.alpha * feat1 + (1 - self.alpha) * feat2
-            outputs.append(out)
-
+            outputs[i] = self.alpha * feat1 + (1 - self.alpha) * feat2
         return outputs
 
 
